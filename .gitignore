@@ -1,0 +1,6 @@
+# GitHub 上不需要的文件
+.workbuddy/
+.DS_Store
+Thumbs.db
+node_modules/
+*.log
