@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>史鉴人物志</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #faf8f5;
+    --card: #ffffff;
+    --border: #e8e2d8;
+    --primary: #7a9e7e;
+    --primary-light: #e8f0e8;
+    --accent: #c9a96e;
+    --accent-light: #f5f0e8;
+    --text: #3a3a3a;
+    --text-secondary: #8a8a7a;
+    --emotional: #d4886b;
+    --shadow: rgba(0,0,0,0.04);
+    --shadow-md: rgba(0,0,0,0.08);
+    --radius: 8px;
+  }
+
+  body {
+    font-family: 'Noto Serif SC', 'Source Han Serif CN', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.8;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(122,158,126,0.06) 0%, transparent 70%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M20 2 L38 20 L20 38 L2 20 Z' fill='none' stroke='rgba(122,158,126,0.05)' stroke-width='0.5'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 布局 */
+  .app-layout {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 0;
+    min-height: 100vh;
+  }
+
+  .main-area {
+    flex: 1;
+    min-width: 0;
+    padding: 0 20px 60px;
+    max-width: 960px;
+    margin: 0 auto;
+    transition: margin-right 0.3s;
+  }
+  .main-area.chat-open { max-width: calc(100vw - 380px); margin-right: 0; }
+
+  /* 右侧AI面板 */
+  .chat-panel {
+    width: 380px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.98);
+    border-left: 1px solid var(--border);
+    box-shadow: -4px 0 20px var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    right: -380px;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: right 0.3s ease;
+  }
+  .chat-panel.open { right: 0; }
+
+  .chat-panel-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: var(--primary-light);
+  }
+  .chat-panel-title {
+    font-size: 14px;
+    color: var(--primary);
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+  .chat-close-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .chat-close-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+  .chat-context-bar {
+    padding: 8px 16px;
+    background: var(--accent-light);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chat-context-bar span { color: var(--accent); font-weight: 500; }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #c8c2b8 transparent;
+  }
+
+  .msg {
+    max-width: 90%;
+    line-height: 1.7;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    animation: msgIn 0.3s ease;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg-user {
+    align-self: flex-end;
+    background: var(--primary);
+    border-radius: 12px 12px 4px 12px;
+    padding: 10px 14px;
+    color: #fff;
+  }
+  .msg-ai {
+    align-self: flex-start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px 12px 12px 12px;
+    padding: 10px 14px;
+    color: var(--text);
+  }
+  .msg-ai-name {
+    font-size: 11px;
+    color: var(--primary);
+    margin-bottom: 5px;
+    letter-spacing: 2px;
+    font-weight: 500;
+  }
+  .msg-loading {
+    align-self: flex-start;
+    color: var(--text-secondary);
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot-ani { display: inline-flex; gap: 3px; }
+  .dot-ani span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: dotBounce 1.2s ease-in-out infinite;
+  }
+  .dot-ani span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-ani span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotBounce {
+    0%,80%,100% { transform: scale(0.6); opacity:0.4; }
+    40% { transform: scale(1); opacity:1; }
+  }
+
+  .quick-questions {
+    padding: 10px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .quick-q {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    background: var(--card);
+  }
+  .quick-q:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+  .chat-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    min-height: 40px;
+    line-height: 1.5;
+    letter-spacing: 0.3px;
+    transition: border-color 0.2s;
+  }
+  .chat-input::placeholder { color: #b8b2a8; }
+  .chat-input:focus { border-color: var(--primary); }
+  .chat-send-btn {
+    background: var(--primary);
+    border: none;
+    border-radius: 6px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    color: #fff;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+  }
+  .chat-send-btn:hover { opacity: 0.85; }
+  .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* AI浮动按钮 */
+  .ai-fab {
+    position: fixed;
+    bottom: 32px;
+    right: 24px;
+    z-index: 90;
+    background: var(--primary);
+    border: none;
+    border-radius: 28px;
+    padding: 12px 20px;
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+    letter-spacing: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px var(--shadow-md);
+  }
+  .ai-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 24px var(--shadow-md); }
+  .ai-fab.hidden { display: none; }
+  .ai-fab-icon { font-size: 18px; }
+
+  /* API Key 弹层 */
+  .key-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .key-modal.show { opacity: 1; pointer-events: auto; }
+  .key-modal-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 480px;
+    max-width: 92vw;
+    position: relative;
+    box-shadow: 0 8px 40px var(--shadow-md);
+    transform: translateY(10px);
+    transition: transform 0.2s;
+  }
+  .key-modal.show .key-modal-box { transform: translateY(0); }
+  .key-modal-title {
+    font-size: 16px;
+    color: var(--text);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .key-modal-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    line-height: 1.8;
+  }
+  .key-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-family: monospace;
+    color: var(--text);
+    outline: none;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+    transition: border-color 0.2s;
+  }
+  .key-input:focus { border-color: var(--primary); }
+  .key-modal-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 20px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover { border-color: var(--text-secondary); }
+  .btn-confirm {
+    background: var(--primary);
+    border: none;
+    border-radius: 6px;
+    padding: 9px 24px;
+    color: #fff;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: opacity 0.2s;
+  }
+  .btn-confirm:hover { opacity: 0.85; }
+
+  /* 头部 */
+  .header {
+    text-align: center;
+    padding: 48px 20px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .header::after {
+    content: '○  ○  ○';
+    display: block;
+    color: var(--primary);
+    font-size: 10px;
+    margin-top: 12px;
+    letter-spacing: 12px;
+    opacity: 0.5;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 8px;
+    margin-bottom: 8px;
+  }
+  .header p { font-size: 13px; color: var(--text-secondary); letter-spacing: 4px; }
+  .header-actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .header-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 18px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text-secondary);
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+  }
+  .header-btn:hover, .header-btn.active {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  /* 搜索 */
+  .search-section { margin-bottom: 28px; }
+  .search-box {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--card);
+    box-shadow: 0 2px 8px var(--shadow);
+    transition: border-color 0.2s;
+  }
+  .search-box:focus-within { border-color: var(--primary); }
+  .search-box input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 14px 20px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+  .search-box input::placeholder { color: #b8b2a8; }
+  .search-mode-toggle {
+    background: var(--primary-light);
+    border: none;
+    border-right: 1px solid var(--border);
+    padding: 0 14px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .search-mode-toggle.ai-mode { color: var(--primary); background: var(--primary-light); font-weight: 500; }
+  .search-mode-toggle:hover { color: var(--primary); }
+  .search-box button {
+    background: var(--primary);
+    border: none;
+    padding: 14px 28px;
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .search-box button:hover { opacity: 0.85; }
+
+  .search-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+  }
+
+  .quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .tag {
+    padding: 5px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    background: var(--card);
+  }
+  .tag:hover, .tag.active {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  /* 卡片 */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: 0 4px 16px var(--shadow-md); }
+  .card-title {
+    font-size: 13px;
+    color: var(--primary);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+  .card-title::before { content: '◆'; font-size: 8px; }
+
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media(max-width: 640px) { .panels { grid-template-columns: 1fr; } }
+
+  /* 人物卡 */
+  .person-header { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px; }
+  .person-avatar {
+    width: 80px; height: 80px;
+    border: 2px solid var(--primary);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    background: var(--primary-light);
+
+    color: var(--primary);
+    flex-shrink: 0;
+    position: relative;
+    transition: transform 0.2s;
+  }
+  .person-avatar:hover { transform: scale(1.05); }
+  .person-name { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: 4px; margin-bottom: 4px; }
+  .person-sub { font-size: 13px; color: var(--text-secondary); letter-spacing: 2px; margin-bottom: 12px; }
+  .person-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .person-tag {
+    padding: 3px 10px;
+    background: var(--accent-light);
+    border: 1px solid rgba(201,169,110,0.3);
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .person-bio { font-size: 14px; line-height: 1.9; color: var(--text); border-top: 1px solid var(--border); padding-top: 16px; letter-spacing: 0.5px; }
+
+  .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .attr-label { font-size: 11px; color: var(--text-secondary); letter-spacing: 2px; margin-bottom: 3px; }
+  .attr-value { font-size: 14px; color: var(--text); letter-spacing: 0.5px; }
+
+  .person-card-actions {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .person-action-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text-secondary);
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .person-action-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .person-action-btn.primary { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+  /* 收藏按钮 */
+  .fav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .fav-btn:hover { border-color: var(--emotional); }
+  .fav-btn.faved { color: var(--emotional); border-color: var(--emotional); background: rgba(212,136,107,0.08); }
+
+  /* CP榜 */
+  .cp-list { display: flex; flex-direction: column; gap: 10px; }
+  .cp-item { display: flex; align-items: center; gap: 10px; }
+  .cp-rank { width: 20px; font-size: 13px; color: var(--text-secondary); text-align: center; flex-shrink: 0; }
+  .cp-rank.top { color: var(--accent); font-weight: 700; }
+  .cp-names { flex: 1; font-size: 14px; color: var(--text); letter-spacing: 0.5px; }
+  .cp-heart { color: var(--emotional); font-size: 12px; margin: 0 4px; }
+  .cp-bar-wrap { width: 80px; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .cp-bar { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.6s ease; }
+  .cp-num { width: 36px; font-size: 12px; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
+
+  .chart-wrap { position: relative; height: 180px; margin-top: 4px; }
+
+  /* 关系图 */
+  .relation-svg-wrap { width: 100%; height: 280px; position: relative; }
+  #relationSvg { width: 100%; height: 100%; }
+  .rel-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+  .rel-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+  .rel-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* 朝代筛选 */
+  .timeline { display: flex; align-items: center; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: #d8d2c8 transparent; gap: 0; }
+  .dynasty {
+    flex-shrink: 0; padding: 8px 14px;
+    border: 1px solid var(--border);
+    font-size: 12px; color: var(--text-secondary);
+    cursor: pointer; transition: all 0.2s; letter-spacing: 2px;
+    background: var(--card);
+  }
+  .dynasty:first-child { border-radius: 6px 0 0 6px; }
+  .dynasty:last-child { border-radius: 0 6px 6px 0; }
+  .dynasty + .dynasty { border-left: none; }
+  .dynasty:hover, .dynasty.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); position: relative; z-index: 1; }
+
+  /* 空状态 */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); font-size: 14px; letter-spacing: 3px; }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* 抽卡动画 */
+  .gacha-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .gacha-overlay.show { opacity: 1; pointer-events: auto; }
+  .gacha-card {
+    width: 240px; height: 340px;
+    perspective: 800px;
+    cursor: pointer;
+  }
+  .gacha-card-inner {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.8s ease;
+  }
+  .gacha-card.flipped .gacha-card-inner {
+    transform: rotateY(180deg);
+  }
+  .gacha-card-front, .gacha-card-back {
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    backface-visibility: hidden;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .gacha-card-front {
+    background: linear-gradient(135deg, var(--accent), var(--primary));
+    color: #fff;
+    font-size: 18px;
+    letter-spacing: 4px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+  .gacha-card-back {
+    background: var(--card);
+    border: 2px solid var(--primary);
+    transform: rotateY(180deg);
+    box-shadow: 0 8px 40px var(--shadow-md);
+  }
+  .gacha-card-back .avatar {
+    font-size: 48px;
+    color: var(--primary);
+    margin-bottom: 12px;
+  }
+  .gacha-card-back .name {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 4px;
+    margin-bottom: 4px;
+  }
+  .gacha-card-back .dynasty {
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: default;
+  }
+  .gacha-card-back .dynasty:hover { background: none; color: var(--text-secondary); }
+  .gacha-hint {
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    letter-spacing: 2px;
+    position: absolute;
+    bottom: -32px;
+  }
+
+  /* 每日人物 */
+  .daily-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+  .daily-card:hover { box-shadow: 0 4px 16px var(--shadow-md); transform: translateY(-1px); }
+  .daily-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    border: 2px solid var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+  .daily-info { flex: 1; }
+  .daily-name { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: 2px; }
+  .daily-sub { font-size: 12px; color: var(--text-secondary); letter-spacing: 1px; margin-top: 2px; }
+  .daily-badge {
+    font-size: 10px;
+    color: var(--accent);
+    border: 1px solid rgba(201,169,110,0.4);
+    border-radius: 10px;
+    padding: 2px 8px;
+    letter-spacing: 1px;
+  }
+
+  /* 收藏列表弹层 */
+  .fav-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .fav-panel.show { opacity: 1; pointer-events: auto; }
+  .fav-panel-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 400px;
+    max-width: 92vw;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px var(--shadow-md);
+  }
+  .fav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .fav-item:hover { background: var(--primary-light); }
+  .fav-item-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+  .fav-item-name { font-size: 14px; color: var(--text); letter-spacing: 1px; }
+  .fav-item-remove {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    transition: color 0.2s;
+  }
+  .fav-item-remove:hover { color: var(--emotional); }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #c8c2b8; border-radius: 2px; }
+
+  @media(max-width: 768px) {
+    .chat-panel { width: 100vw; right: -100vw; }
+    .ai-fab { bottom: 20px; right: 16px; }
+  }
+
+  /* 入场动画 */
+  .fade-in {
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tooltip {
+    position: fixed;
+    background: var(--card);
+    border: 1px solid var(--primary);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 999;
+    max-width: 200px;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 16px var(--shadow-md);
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- 抽卡弹层 -->
+<div class="gacha-overlay" id="gachaOverlay" onclick="closeGacha(event)">
+  <div class="gacha-card" id="gachaCard" onclick="flipGacha(event)">
+    <div class="gacha-card-inner">
+      <div class="gacha-card-front">
+        <div>史鉴</div>
+        <div style="font-size:32px; margin:12px 0;">✧</div>
+        <div>点击抽卡</div>
+      </div>
+      <div class="gacha-card-back" id="gachaBack">
+        <div class="avatar" id="gachaAvatar"></div>
+        <div class="name" id="gachaName"></div>
+        <div class="dynasty" id="gachaDynasty"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 收藏列表弹层 -->
+<div class="fav-panel" id="favPanel" onclick="closeFavPanel(event)">
+  <div class="fav-panel-box" onclick="event.stopPropagation()">
+    <div class="card-title">我的收藏</div>
+    <div id="favList"></div>
+  </div>
+</div>
+
+<!-- 主区域 -->
+<div class="main-area" id="mainArea">
+  <!-- 头部 -->
+  <div class="header">
+    <h1>史鉴人物志</h1>
+    <p>千古风流 · 一鉴便知</p>
+    <div class="header-actions">
+      <button class="header-btn" onclick="openGacha()">🎴 随机探索</button>
+      <button class="header-btn" onclick="showFavPanel()">⭐ 我的收藏</button>
+      <button class="header-btn" onclick="openChat()">💬 AI 对话</button>
+    </div>
+  </div>
+
+  <!-- 每日人物 -->
+  <div id="dailySection"></div>
+
+  <!-- 搜索区 -->
+  <div class="search-section">
+    <div class="search-box">
+      <button class="search-mode-toggle" id="modeToggle" onclick="toggleSearchMode()" title="切换搜索模式">本地</button>
+      <input type="text" id="searchInput" placeholder="输入历史人物姓名…" autocomplete="off">
+      <button onclick="doSearch()">检索</button>
+    </div>
+    <div class="search-hint" id="searchHint">
+      当前：本地数据库检索 · 点击左侧按钮切换至 AI 智能搜索
+    </div>
+    <div class="quick-tags" id="quickTags">
+      <span class="tag" onclick="selectPerson('诸葛亮')">诸葛亮</span>
+      <span class="tag" onclick="selectPerson('曹操')">曹操</span>
+      <span class="tag" onclick="selectPerson('武则天')">武则天</span>
+      <span class="tag" onclick="selectPerson('李白')">李白</span>
+      <span class="tag" onclick="selectPerson('岳飞')">岳飞</span>
+      <span class="tag" onclick="selectPerson('苏轼')">苏轼</span>
+      <span class="tag" onclick="selectPerson('王昭君')">王昭君</span>
+      <span class="tag" onclick="selectPerson('项羽')">项羽</span>
+    </div>
+  </div>
+
+  <!-- 朝代筛选 -->
+  <div class="card" style="margin-bottom:16px; padding:14px 20px;">
+    <div class="card-title">朝代筛选</div>
+    <div class="timeline" id="dynastyLine">
+      <div class="dynasty active" onclick="filterDynasty('all')">全部</div>
+      <div class="dynasty" onclick="filterDynasty('先秦')">先秦</div>
+      <div class="dynasty" onclick="filterDynasty('秦汉')">秦汉</div>
+      <div class="dynasty" onclick="filterDynasty('三国')">三国</div>
+      <div class="dynasty" onclick="filterDynasty('魏晋南北朝')">魏晋南北朝</div>
+      <div class="dynasty" onclick="filterDynasty('隋唐')">隋唐</div>
+      <div class="dynasty" onclick="filterDynasty('宋元')">宋元</div>
+      <div class="dynasty" onclick="filterDynasty('明清')">明清</div>
+    </div>
+  </div>
+
+  <!-- 内容区 -->
+  <div id="mainContent">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="empty-state fade-in">
+        <div class="empty-icon">📜</div>
+        <div>请搜索或点击上方人物标签</div>
+        <div style="margin-top:8px;font-size:12px;color:#b8b2a8;">切换至 AI 搜索可查询任意历史人物</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI 对话面板 -->
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-panel-header">
+    <div class="chat-panel-title">📜 AI 文渊阁</div>
+    <button class="chat-close-btn" onclick="closeChat()">✕</button>
+  </div>
+  <div class="chat-context-bar" id="chatContextBar">
+    当前：<span id="chatContextName">未选择人物</span>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="msg msg-ai">
+      <div class="msg-ai-name">◆ 文渊阁学士</div>
+      阁下安好。吾乃史鉴人物志中一员史官，博古通今，谈吐风雅。<br><br>
+      足下若有疑问，尽管垂询：<br>
+      · 某位历史人物的生平事迹<br>
+      · 二人之间关系对比<br>
+      · 历史事件之评析<br>
+      · 诗词文章之解读<br><br>
+      请先在上方填入 API Key，方可与吾对话。
+    </div>
+  </div>
+  <div class="quick-questions" id="quickQuestions">
+    <span class="quick-q" onclick="sendQuickQ(this)">生平简介</span>
+    <span class="quick-q" onclick="sendQuickQ(this)">代表作品</span>
+    <span class="quick-q" onclick="sendQuickQ(this)">历史评价</span>
+    <span class="quick-q" onclick="sendQuickQ(this)">主要成就</span>
+    <span class="quick-q" onclick="sendQuickQ(this)">人物关系</span>
+    <span class="quick-q" onclick="sendQuickQ(this)">趣闻轶事</span>
+  </div>
+  <div class="chat-input-area">
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chatInput" placeholder="足下有何垂询…" rows="1"></textarea>
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI浮动按钮 -->
+<button class="ai-fab" id="aiFab" onclick="openChat()">
+  <span class="ai-fab-icon">💬</span> AI 对话
+</button>
+
+<!-- API Key 弹层 -->
+<div class="key-modal" id="keyModal">
+  <div class="key-modal-box">
+    <div class="key-modal-title">配置 DeepSeek API Key</div>
+    <div class="key-modal-sub">
+      前往 <strong style="color:var(--accent)">platform.deepseek.com</strong> 注册并获取 API Key。<br>
+      Key 仅保存在浏览器本地，不会上传至任何服务器。
+    </div>
+    <input type="password" class="key-input" id="keyInput" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx">
+    <div style="font-size:11px; color:#b8b2a8; margin-bottom:16px; letter-spacing:1px;">
+      填入后点击下方保存即可生效
+    </div>
+    <div class="key-modal-btns">
+      <button class="btn-cancel" onclick="closeKeyModal()">取消</button>
+      <button class="btn-confirm" onclick="saveKey()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ===== 配置 ===== */
+// Vercel部署：使用相对路径 /api/deepseek；本地开发：走代理
+const DEEPSEEK_API = '/api/deepseek';
+const DEEPSEEK_MODEL = 'deepseek-chat';
+
+/* ===== API Key 管理 ===== */
+let apiKey = localStorage.getItem('deepseek_api_key') || '';
+if (!localStorage.getItem('deepseek_api_key')) {
+  localStorage.setItem('deepseek_api_key', apiKey);
+}
+
+function openKeyModal() {
+  document.getElementById('keyInput').value = apiKey;
+  document.getElementById('keyModal').classList.add('show');
+}
+function closeKeyModal() {
+  document.getElementById('keyModal').classList.remove('show');
+}
+function saveKey() {
+  const val = document.getElementById('keyInput').value.trim();
+  apiKey = val;
+  localStorage.setItem('deepseek_api_key', val);
+  closeKeyModal();
+  appendSysMsg('API Key 已保存，文渊阁随时听候差遣。');
+}
+
+/* ===== 收藏系统 ===== */
+function getFavs() { return JSON.parse(localStorage.getItem('history_favs') || '[]'); }
+function toggleFav(name) {
+  let favs = getFavs();
+  if (favs.includes(name)) favs = favs.filter(f => f !== name);
+  else favs.push(name);
+  localStorage.setItem('history_favs', JSON.stringify(favs));
+  return favs.includes(name);
+}
+function isFaved(name) { return getFavs().includes(name); }
+function showFavPanel() {
+  const favs = getFavs();
+  const list = document.getElementById('favList');
+  if (!favs.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:20px;">暂无收藏，快去收藏心仪的人物吧～</div>';
+  } else {
+    list.innerHTML = favs.map(name => {
+      const p = DB[name];
+      if (!p) return '';
+      return `<div class="fav-item" onclick="selectPerson('${name}'); closeFavPanel();">
+        <div class="fav-item-avatar">${p.avatar || p.name.slice(-1)}</div>
+        <div class="fav-item-name">${p.name}</div>
+        <button class="fav-item-remove" onclick="event.stopPropagation(); removeFav('${name}')">✕</button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('favPanel').classList.add('show');
+}
+function closeFavPanel(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('favPanel').classList.remove('show');
+}
+function removeFav(name) {
+  let favs = getFavs().filter(f => f !== name);
+  localStorage.setItem('history_favs', JSON.stringify(favs));
+  showFavPanel();
+  if (currentPerson && currentPerson.name === name) {
+    updateFavBtn(name);
+  }
+}
+
+/* ===== 抽卡系统 ===== */
+function getDailyName() {
+  const today = new Date().toISOString().slice(0, 10);
+  const seed = today.split('-').join('');
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash = hash & hash;
+  }
+  const keys = Object.keys(DB);
+  return keys[Math.abs(hash) % keys.length];
+}
+function initDaily() {
+  const name = getDailyName();
+  const p = DB[name];
+  if (!p) return;
+  document.getElementById('dailySection').innerHTML = `
+    <div class="daily-card" onclick="selectPerson('${p.name}')">
+      <div class="daily-avatar">${p.avatar || p.name.slice(-1)}</div>
+      <div class="daily-info">
+        <div class="daily-name">${p.name}</div>
+        <div class="daily-sub">${p.dynasty} · ${p.role}</div>
+      </div>
+      <div class="daily-badge">今日推荐</div>
+    </div>`;
+}
+
+let gachaFlipped = false;
+let gachaPerson = null;
+function openGacha() {
+  const keys = Object.keys(DB);
+  gachaPerson = DB[keys[Math.floor(Math.random() * keys.length)]];
+  gachaFlipped = false;
+  document.getElementById('gachaCard').classList.remove('flipped');
+  document.getElementById('gachaAvatar').textContent = gachaPerson.avatar || gachaPerson.name.slice(-1);
+  document.getElementById('gachaName').textContent = gachaPerson.name;
+  document.getElementById('gachaDynasty').textContent = gachaPerson.dynasty + ' · ' + gachaPerson.alias;
+  document.getElementById('gachaOverlay').classList.add('show');
+}
+function flipGacha(e) {
+  e.stopPropagation();
+  if (!gachaFlipped) {
+    gachaFlipped = true;
+    document.getElementById('gachaCard').classList.add('flipped');
+  }
+}
+function closeGacha(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('gachaOverlay').classList.remove('show');
+  if (gachaFlipped && gachaPerson) {
+    selectPerson(gachaPerson.name);
+  }
+}
+
+/* ===== 搜索模式 ===== */
+let aiSearchMode = false;
+function toggleSearchMode() {
+  aiSearchMode = !aiSearchMode;
+  const btn = document.getElementById('modeToggle');
+  const hint = document.getElementById('searchHint');
+  if (aiSearchMode) {
+    btn.textContent = 'AI';
+    btn.classList.add('ai-mode');
+    hint.textContent = '当前：AI 智能搜索 · 可查询任意历史人物，由 DeepSeek 提供信息';
+  } else {
+    btn.textContent = '本地';
+    btn.classList.remove('ai-mode');
+    hint.textContent = '当前：本地数据库检索 · 点击左侧按钮切换至 AI 智能搜索';
+  }
+}
+
+/* ===== 数据库 ===== */
+const DB = {
+  '诸葛亮': {
+    name: '诸葛亮', alias: '孔明 · 卧龙', dynasty: '三国', years: '181年—234年',
+    role: '政治家 · 军事家', avatar: '孔',
+    tags: ['蜀汉丞相','卧龙','隆中对','木牛流马'],
+    bio: '诸葛亮，字孔明，三国蜀汉丞相，杰出的政治家、军事家、发明家、文学家。其忠贞为国、鞠躬尽瘁之精神千古传颂。',
+    attrs: { '籍贯':'琅邪阳都（今山东）', '字号':'字孔明，号卧龙', '主公':'刘备', '代表作':'出师表、隆中对' },
+    cpList: [{ name: '刘备', heat: 95, trend: [72,78,82,85,90,93,95,94,96,95] },{ name: '司马懿', heat: 88, trend: [60,65,72,76,80,84,86,87,88,88] },{ name: '周瑜', heat: 76, trend: [50,55,60,64,68,70,73,75,76,76] },{ name: '庞统', heat: 62, trend: [40,44,48,52,56,58,60,61,62,62] },{ name: '姜维', heat: 55, trend: [30,35,40,44,48,50,52,53,55,55] }],
+    relations: [{ target: '刘备', type: '君臣', color: '#e8a030' },{ target: '刘禅', type: '辅佐', color: '#e8a030' },{ target: '关羽', type: '同僚', color: '#4080c0' },{ target: '张飞', type: '同僚', color: '#4080c0' },{ target: '司马懿', type: '对手', color: '#c04040' },{ target: '周瑜', type: '对手', color: '#c04040' },{ target: '庞统', type: '挚友', color: '#60a060' }]
+  },
+  '曹操': {
+    name: '曹操', alias: '孟德 · 魏武帝', dynasty: '三国', years: '155年—220年',
+    role: '政治家 · 军事家 · 诗人', avatar: '操',
+    tags: ['丞相','魏王','建安文学'],
+    bio: '曹操，东汉末年权臣，曹魏政权的奠基者。著名的政治家、军事家与诗人，以"宁教我负天下人，休教天下人负我"传世。',
+    attrs: { '籍贯':'沛国谯县（今安徽）', '字号':'字孟德', '谥号':'魏武帝', '代表作':'短歌行、观沧海' },
+    cpList: [{ name: '刘备', heat: 92, trend: [70,74,78,82,86,89,90,91,92,92] },{ name: '司马懿', heat: 80, trend: [55,60,65,68,72,74,76,78,80,80] },{ name: '荀彧', heat: 78, trend: [50,56,61,65,68,72,74,76,78,78] },{ name: '貂蝉', heat: 72, trend: [55,58,62,65,67,69,70,71,72,72] },{ name: '典韦', heat: 60, trend: [40,44,48,51,54,56,57,59,60,60] }],
+    relations: [{ target: '刘备', type: '对手', color: '#c04040' },{ target: '孙权', type: '对手', color: '#c04040' },{ target: '荀彧', type: '谋士', color: '#e8a030' },{ target: '典韦', type: '忠臣', color: '#4080c0' },{ target: '司马懿', type: '属下', color: '#8060c0' }]
+  },
+  '武则天': {
+    name: '武则天', alias: '武媚娘 · 则天', dynasty: '隋唐', years: '624年—705年',
+    role: '政治家 · 唯一女帝', avatar: '武',
+    tags: ['女皇帝','武周','感业寺'],
+    bio: '武则天，名武曌，唐至武周时期政治家，中国历史上唯一的正统女皇帝，在位期间重视农业、扩大科举，政启开元。',
+    attrs: { '籍贯':'并州文水（今山西）', '原名':'武曌', '在位':'690年—705年', '陵寝':'乾陵' },
+    cpList: [{ name: '李治', heat: 90, trend: [68,73,77,81,84,87,88,89,90,90] },{ name: '上官婉儿', heat: 85, trend: [58,64,69,74,78,81,83,84,85,85] },{ name: '狄仁杰', heat: 82, trend: [55,62,67,71,75,78,79,81,82,82] },{ name: '薛怀义', heat: 65, trend: [40,45,50,54,58,60,62,63,65,65] },{ name: '李显', heat: 58, trend: [35,40,44,48,51,53,55,56,58,58] }],
+    relations: [{ target: '李治', type: '夫妻', color: '#c070a0' },{ target: '上官婉儿', type: '重臣', color: '#e8a030' },{ target: '狄仁杰', type: '股肱', color: '#4080c0' },{ target: '李显', type: '母子', color: '#60a060' }]
+  },
+  '李白': {
+    name: '李白', alias: '太白 · 诗仙', dynasty: '隋唐', years: '701年—762年',
+    role: '浪漫主义诗人', avatar: '白',
+    tags: ['诗仙','谪仙人','静夜思'],
+    bio: '李白，号青莲居士，唐代伟大的浪漫主义诗人，被后人誉为"诗仙"。代表作《静夜思》《将进酒》《蜀道难》等。',
+    attrs: { '籍贯':'蜀郡江油（今四川）', '字号':'字太白，号青莲居士', '流派':'浪漫主义', '代表作':'将进酒、蜀道难' },
+    cpList: [{ name: '杜甫', heat: 98, trend: [75,80,85,88,92,95,96,97,98,98] },{ name: '王维', heat: 72, trend: [50,55,60,63,66,68,70,71,72,72] },{ name: '贺知章', heat: 65, trend: [42,47,51,54,57,60,62,63,65,65] },{ name: '孟浩然', heat: 60, trend: [38,43,47,50,53,56,58,59,60,60] },{ name: '高适', heat: 55, trend: [35,39,43,46,49,51,53,54,55,55] }],
+    relations: [{ target: '杜甫', type: '挚友', color: '#60a060' },{ target: '贺知章', type: '引荐', color: '#e8a030' },{ target: '王维', type: '同时代', color: '#4080c0' },{ target: '玄宗', type: '君臣', color: '#8060c0' }]
+  },
+  '岳飞': {
+    name: '岳飞', alias: '鹏举 · 武穆', dynasty: '宋元', years: '1103年—1142年',
+    role: '军事家 · 民族英雄', avatar: '飞',
+    tags: ['岳家军','精忠报国','满江红'],
+    bio: '岳飞，南宋抗金名将，民族英雄。其忠义之心、精忠报国之精神深深刻入中华民族文化基因。',
+    attrs: { '籍贯':'相州汤阴（今河南）', '字号':'字鹏举', '谥号':'武穆、忠武', '代表作':'满江红' },
+    cpList: [{ name: '秦桧', heat: 93, trend: [70,75,79,83,87,89,91,92,93,93] },{ name: '韩世忠', heat: 78, trend: [52,57,61,65,69,72,74,76,78,78] },{ name: '宋高宗', heat: 85, trend: [62,67,72,76,79,82,83,84,85,85] },{ name: '牛皋', heat: 60, trend: [38,43,47,50,53,56,57,59,60,60] },{ name: '完颜兀术', heat: 70, trend: [48,52,56,60,63,65,67,69,70,70] }],
+    relations: [{ target: '秦桧', type: '政敌', color: '#c04040' },{ target: '宋高宗', type: '君臣', color: '#e8a030' },{ target: '韩世忠', type: '同僚', color: '#4080c0' },{ target: '牛皋', type: '部将', color: '#60a060' }]
+  },
+  '苏轼': {
+    name: '苏轼', alias: '子瞻 · 东坡居士', dynasty: '宋元', years: '1037年—1101年',
+    role: '文学家 · 书法家', avatar: '苏',
+    tags: ['东坡居士','豪放词','赤壁赋'],
+    bio: '苏轼，号东坡居士，北宋文学家、书法家、画家，豪放词派代表，唐宋八大家之一。',
+    attrs: { '籍贯':'眉州眉山（今四川）', '字号':'字子瞻，号东坡居士', '流派':'豪放派', '代表作':'赤壁赋、念奴娇' },
+    cpList: [{ name: '王安石', heat: 82, trend: [60,65,68,72,75,77,79,80,82,82] },{ name: '黄庭坚', heat: 75, trend: [52,57,61,64,67,70,72,73,75,75] },{ name: '辛弃疾', heat: 78, trend: [55,59,63,66,69,72,74,76,78,78] },{ name: '欧阳修', heat: 68, trend: [45,50,54,57,60,62,64,66,68,68] },{ name: '苏辙', heat: 72, trend: [50,55,59,62,65,67,69,70,72,72] }],
+    relations: [{ target: '王安石', type: '政敌', color: '#c04040' },{ target: '黄庭坚', type: '挚友', color: '#60a060' },{ target: '苏辙', type: '兄弟', color: '#60a060' },{ target: '欧阳修', type: '老师', color: '#e8a030' }]
+  },
+  '王昭君': {
+    name: '王昭君', alias: '嫱 · 明妃', dynasty: '秦汉', years: '约前52年—约前15年',
+    role: '和亲使者 · 四大美人', avatar: '昭',
+    tags: ['四大美人','昭君出塞','和亲'],
+    bio: '王昭君，西汉南郡秭归人，与西施、貂蝉、杨玉环并称"中国古代四大美女"，昭君出塞后，汉匈两族团结和睦。',
+    attrs: { '籍贯':'南郡秭归（今湖北）', '字号':'字昭君，封宁胡阏氏', '身份':'汉元帝宫人', '意义':'和亲匈奴' },
+    cpList: [{ name: '呼韩邪单于', heat: 88, trend: [65,70,74,78,82,84,86,87,88,88] },{ name: '汉元帝', heat: 80, trend: [58,63,67,71,74,76,77,79,80,80] },{ name: '毛延寿', heat: 68, trend: [48,52,56,59,62,64,65,67,68,68] },{ name: '西施', heat: 72, trend: [50,55,59,62,65,67,69,70,72,72] },{ name: '貂蝉', heat: 65, trend: [44,48,52,55,58,60,62,63,65,65] }],
+    relations: [{ target: '汉元帝', type: '君臣', color: '#e8a030' },{ target: '呼韩邪单于', type: '夫妻', color: '#c070a0' },{ target: '毛延寿', type: '相关', color: '#c04040' },{ target: '西施', type: '四大美人', color: '#60a060' }]
+  },
+  '项羽': {
+    name: '项羽', alias: '籍 · 西楚霸王', dynasty: '秦汉', years: '前232年—前202年',
+    role: '军事家 · 西楚霸王', avatar: '羽',
+    tags: ['西楚霸王','巨鹿之战','破釜沉舟'],
+    bio: '项羽，秦朝末年起义军领袖、军事家，楚国名将项燕之孙。以"力拔山兮气盖世"流传千古，最终乌江自刎。',
+    attrs: { '籍贯':'泗水下相（今江苏）', '字号':'字羽', '封号':'西楚霸王', '代表战役':'巨鹿之战' },
+    cpList: [{ name: '虞姬', heat: 98, trend: [78,83,87,90,93,95,96,97,98,98] },{ name: '刘邦', heat: 95, trend: [75,79,83,87,90,92,93,94,95,95] },{ name: '范增', heat: 78, trend: [55,60,64,68,71,73,75,76,78,78] },{ name: '韩信', heat: 82, trend: [60,64,68,72,75,77,79,80,82,82] },{ name: '钟离昧', heat: 58, trend: [38,42,46,49,52,54,55,57,58,58] }],
+    relations: [{ target: '虞姬', type: '挚爱', color: '#c070a0' },{ target: '刘邦', type: '宿敌', color: '#c04040' },{ target: '范增', type: '谋士', color: '#e8a030' },{ target: '韩信', type: '对手', color: '#c04040' }]
+  }
+};
+
+/* ===== 状态 ===== */
+let currentPerson = null;
+let trendChart = null;
+let chatHistory = [];
+let aiSearching = false;
+
+/* ===== 搜索 ===== */
+function doSearch() {
+  const val = document.getElementById('searchInput').value.trim();
+  if (!val) return;
+  if (aiSearchMode) aiSearchPerson(val);
+  else selectPerson(val);
+}
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+function selectPerson(name) {
+  document.querySelectorAll('.tag').forEach(t => t.classList.toggle('active', t.textContent.trim() === name));
+  document.getElementById('searchInput').value = name;
+  const person = DB[name];
+  if (!person) {
+    document.getElementById('mainContent').innerHTML = `<div class="card" style="margin-bottom:16px;">
+      <div class="empty-state">
+        <div class="empty-icon">?</div><div>本地数据库未收录「${name}」</div>
+        <div style="margin-top:12px;"><button onclick="switchToAISearch('${name}')" style="background:var(--primary-light);border:1px solid var(--primary);border-radius:6px;padding:8px 16px;color:var(--primary);cursor:pointer;letter-spacing:2px;">切换 AI 搜索</button></div>
+      </div></div>`;
+    return;
+  }
+  currentPerson = person;
+  updateChatContext(person.name);
+  renderPerson(person);
+}
+
+function switchToAISearch(name) {
+  if (!aiSearchMode) toggleSearchMode();
+  document.getElementById('searchInput').value = name;
+  aiSearchPerson(name);
+}
+
+/* AI搜索 */
+async function aiSearchPerson(name) {
+  if (aiSearching) return;
+  if (!apiKey) { openKeyModal(); return; }
+  aiSearching = true;
+  document.getElementById('mainContent').innerHTML = `<div class="card" style="margin-bottom:16px;">
+    <div class="ai-searching"><div class="dot-ani"><span></span><span></span><span></span></div> 正在查询「${name}」…</div></div>`;
+  const prompt = `你是一位博古通今的古代史官，请以古风介绍历史人物「${name}」。
+请严格按以下JSON格式返回（半文半白风格介绍bio字段）：
+{
+  "name": "姓名",
+  "alias": "字号 · 称号",
+  "dynasty": "所属朝代",
+  "years": "生卒年份",
+  "role": "主要身份",
+  "avatar": "取名字最后一个字",
+  "tags": ["标签1","标签2","标签3","标签4","标签5"],
+  "bio": "150字以内的古风简介，半文半白，语气儒雅",
+  "attrs": {"籍贯":"出生地","字号":"字和号","主要成就":"1-2项","代表作":"作品名"},
+  "cpList": [{"name":"相关人物","heat":分值0-100,"trend":[10个数列]}],
+  "relations": [{"target":"人物","type":"关系","color":"颜色代码"}]
+}`;
+  try {
+    const res = await callDeepSeek([{ role: 'user', content: prompt }], 1200);
+    let jsonStr = res.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const person = JSON.parse(jsonStr);
+    person.aiGenerated = true;
+    currentPerson = person;
+    updateChatContext(person.name);
+    renderPerson(person);
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML = `<div class="card" style="margin-bottom:16px;">
+      <div class="empty-state"><div class="empty-icon">!</div><div>AI查询失败：${e.message}</div></div></div>`;
+  } finally { aiSearching = false; }
+}
+
+/* ===== DeepSeek API 调用 ===== */
+async function callDeepSeek(messages, maxTokens = 800) {
+  const resp = await fetch(DEEPSEEK_API, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
+    },
+    body: JSON.stringify({ model: DEEPSEEK_MODEL, messages, max_tokens: maxTokens, temperature: 0.7, stream: false })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+  return (await resp.json()).choices[0].message.content;
+}
+
+/* ===== 朝代筛选 ===== */
+function filterDynasty(dynasty) {
+  document.querySelectorAll('.dynasty').forEach(d => d.classList.toggle('active', d.textContent === (dynasty === 'all' ? '全部' : dynasty)));
+  const tags = document.getElementById('quickTags');
+  tags.innerHTML = '';
+  Object.values(DB).forEach(p => {
+    if (dynasty === 'all' || p.dynasty === dynasty) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = p.name;
+      tag.onclick = () => selectPerson(p.name);
+      tags.appendChild(tag);
+    }
+  });
+}
+
+/* ===== 渲染人物 ===== */
+function updateFavBtn(name) {
+  const btn = document.getElementById('favBtn');
+  if (!btn) return;
+  const faved = isFaved(name);
+  btn.classList.toggle('faved', faved);
+  btn.textContent = faved ? '★' : '☆';
+}
+function renderPerson(p) {
+  const faved = isFaved(p.name);
+  const aiTag = p.aiGenerated ? '<span style="font-size:11px;color:var(--primary);border:1px solid var(--primary);border-radius:10px;padding:2px 8px;letter-spacing:1px;margin-left:10px;">AI生成</span>' : '';
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `<div class="card person-info fade-in" style="margin-bottom:16px;">
+    <div class="card-title">人物简介 ${aiTag}
+      <button class="fav-btn ${faved?'faved':''}" id="favBtn" onclick="const f=toggleFav('${p.name}');this.classList.toggle('faved',f);this.textContent=f?'★':'☆'">${faved?'★':'☆'}</button>
+    </div>
+    <div class="person-header">
+      <div class="person-avatar">${p.avatar || p.name.slice(-1)}</div>
+      <div>
+        <div class="person-name">${p.name}</div>
+        <div class="person-sub">${p.alias} · ${p.dynasty} · ${p.years}</div>
+        <div class="person-tags">${(p.tags || []).map(t => `<span class="person-tag">${t}</span>`).join('')}</div>
+      </div>
+    </div>
+    <p class="person-bio">${p.bio}</p>
+    <div style="margin-top:16px;">
+      <div class="attr-grid">${Object.entries(p.attrs || {}).map(([k,v]) => `<div><div class="attr-label">【${k}】</div><div class="attr-value">${v}</div></div>`).join('')}</div>
+    </div>
+    <div class="person-card-actions">
+      <button class="person-action-btn primary" onclick="askAboutPerson('请详细介绍${p.name}的生平与成就')">AI 深度介绍</button>
+      <button class="person-action-btn" onclick="askAboutPerson('评述${p.name}的历史地位与后世影响')">历史评价</button>
+      <button class="person-action-btn" onclick="askAboutPerson('讲述${p.name}的有趣故事或轶事')">趣闻轶事</button>
+      <button class="person-action-btn" onclick="askAboutPerson('赏析${p.name}的代表作品或重要事件')">代表作品</button>
+    </div>
+  </div>
+  <div class="panels">
+    <div class="card"><div class="card-title">同人热度 CP 榜</div><div class="cp-list" id="cpList"></div></div>
+    <div class="card"><div class="card-title">近10期 CP 热度走势</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;" id="cpSelector"></div><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:0;"><div class="card-title">人物关系图</div><div class="relation-svg-wrap"><svg id="relationSvg"></svg></div><div class="rel-legend"><div class="rel-legend-item"><div class="rel-dot" style="background:#e8a030"></div>君臣</div><div class="rel-legend-item"><div class="rel-dot" style="background:#c04040"></div>对手</div><div class="rel-legend-item"><div class="rel-dot" style="background:#60a060"></div>挚友</div><div class="rel-legend-item"><div class="rel-dot" style="background:#c070a0"></div>情感</div><div class="rel-legend-item"><div class="rel-dot" style="background:#8060c0"></div>师徒</div></div></div>`;
+  renderCPList(p);
+  renderRelationGraph(p);
+  initTrendChart(p, 0);
+}
+
+/* ===== CP列表 ===== */
+function renderCPList(p) {
+  const el = document.getElementById('cpList');
+  const sel = document.getElementById('cpSelector');
+  if (!p.cpList || !p.cpList.length) { el.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;text-align:center;padding:20px;">暂无数据</div>'; return; }
+  el.innerHTML = p.cpList.map((cp, i) => `<div class="cp-item"><div class="cp-rank ${i<3?'top':''}">${i+1}</div><div class="cp-names">${p.name}<span class="cp-heart">♥</span>${cp.name}</div><div class="cp-bar-wrap"><div class="cp-bar" style="width:${cp.heat}%"></div></div><div class="cp-num">${cp.heat}</div></div>`).join('');
+  sel.innerHTML = p.cpList.map((cp, i) => `<span class="tag ${i===0?'active':''}" onclick="switchTrend(${i})" id="cpBtn${i}">× ${cp.name}</span>`).join('');
+}
+function switchTrend(idx) {
+  document.querySelectorAll('#cpSelector .tag').forEach((t, i) => t.classList.toggle('active', i===idx));
+  if (!currentPerson) return;
+  if (trendChart) trendChart.destroy();
+  initTrendChart(currentPerson, idx);
+}
+function initTrendChart(p, cpIdx) {
+  const cp = (p.cpList || [])[cpIdx];
+  const ctx = document.getElementById('trendChart');
+  if (!ctx || !cp) return;
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['1','2','3','4','5','6','7','8','9','10'],
+      datasets: [{ label: `${p.name}×${cp.name}`, data: cp.trend, borderColor: '#7a9e7e', backgroundColor: 'rgba(122,158,126,0.1)', borderWidth: 2, pointBackgroundColor: '#c9a96e', pointRadius: 4, tension: 0.4, fill: true }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8a8a7a', font: { size: 11 } }, grid: { color: '#e8e2d8' } }, y: { min: 0, max: 100, ticks: { color: '#8a8a7a', font: { size: 11 }, stepSize: 25 }, grid: { color: '#e8e2d8' } } } }
+  });
+}
+
+/* ===== 关系图 ===== */
+function renderRelationGraph(p) {
+  const svg = document.getElementById('relationSvg');
+  if (!svg || !p.relations || !p.relations.length) return;
+  const w = svg.parentElement.offsetWidth || 500;
+  const h = 280;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const rels = p.relations;
+  const cx = w / 2, cy = h / 2;
+  const r = Math.min(cx, cy) - 60;
+  let html = '';
+  rels.forEach((rel, i) => {
+    const angle = (2 * Math.PI * i / rels.length) - Math.PI / 2;
+    const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle);
+    const mx = (cx + nx) / 2, my = (cy + ny) / 2;
+    html += `<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${rel.color}" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="4 3"/>
+    <text x="${mx}" y="${my - 4}" text-anchor="middle" fill="${rel.color}" font-size="10" opacity="0.8">${rel.type}</text>`;
+  });
+  rels.forEach((rel, i) => {
+    const angle = (2 * Math.PI * i / rels.length) - Math.PI / 2;
+    const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle);
+    const isLeft = nx < cx - 10;
+    const anchor = isLeft ? 'end' : (nx > cx + 10 ? 'start' : 'middle');
+    const lx = nx + (isLeft ? -22 : (nx > cx + 10 ? 22 : 0));
+    const ly = ny > cy + 10 ? ny + 20 : (ny < cy - 10 ? ny - 14 : ny + 4);
+    const targetPerson = DB[rel.target];
+    html += `<circle cx="${nx}" cy="${ny}" r="18" fill="rgba(122,158,126,0.1)" stroke="${rel.color}" stroke-width="1.5" style="cursor:${targetPerson?'pointer':'default'}" ${targetPerson?`onclick="selectPerson('${rel.target}')"` : ''}/>
+    <text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" fill="${rel.color}" font-size="14" font-weight="500">${rel.target.slice(-1)}</text>
+    <text x="${lx}" y="${ly}" text-anchor="${anchor}" fill="#8a8a7a" font-size="12">${rel.target}</text>`;
+  });
+  html += `<circle cx="${cx}" cy="${cy}" r="30" fill="rgba(122,158,126,0.15)" stroke="#7a9e7e" stroke-width="2"/>
+  <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="#7a9e7e" font-size="16" font-weight="700">${p.name.slice(0,2)}</text>`;
+  svg.innerHTML = html;
+}
+
+/* ===== AI 对话面板 ===== */
+function openChat() {
+  document.getElementById('chatPanel').classList.add('open');
+  document.getElementById('mainArea').classList.add('chat-open');
+  document.getElementById('aiFab').classList.add('hidden');
+}
+function closeChat() {
+  document.getElementById('chatPanel').classList.remove('open');
+  document.getElementById('mainArea').classList.remove('chat-open');
+  document.getElementById('aiFab').classList.remove('hidden');
+}
+function updateChatContext(name) {
+  document.getElementById('chatContextName').textContent = name || '未选择人物';
+  if (name) {
+    document.getElementById('quickQuestions').innerHTML = [
+      `介绍${name}的生平`, `${name}的主要成就`, `${name}的历史评价`,
+      `${name}的趣闻轶事`, `${name}的代表作品`, `与${name}相关的历史事件`
+    ].map(q => `<span class="quick-q" onclick="sendQuickQ(this)">${q}</span>`).join('');
+  }
+}
+function appendSysMsg(text) {
+  const messages = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg msg-ai';
+  div.innerHTML = `<div class="msg-ai-name">◆ 系统提示</div>${text}`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+function sendQuickQ(el) {
+  document.getElementById('chatInput').value = el.textContent.trim();
+  sendChat();
+}
+async function askAboutPerson(question) {
+  openChat();
+  document.getElementById('chatInput').value = question;
+  await sendChat();
+}
+
+/* ===== 发送对话（古风设定）===== */
+let isSending = false;
+async function sendChat() {
+  if (isSending) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!apiKey) { openKeyModal(); return; }
+
+  isSending = true;
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('chatSendBtn').disabled = true;
+
+  const messages = document.getElementById('chatMessages');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'msg msg-user';
+  userDiv.textContent = text;
+  messages.appendChild(userDiv);
+
+  const loadDiv = document.createElement('div');
+  loadDiv.className = 'msg-loading';
+  loadDiv.innerHTML = '<div class="dot-ani"><span></span><span></span><span></span></div> 文渊学士正在思索…';
+  messages.appendChild(loadDiv);
+  messages.scrollTop = messages.scrollHeight;
+
+  // 古风系统提示
+  const systemPrompt = currentPerson
+    ? `【古风史官人设】你是「史鉴人物志」中一位博古通今的史官，名唤文渊。你以古人姿态回应：
+1. 半文半白，语气儒雅从容，偶用「足下」「阁下」「窃以为」「善哉」等古语
+2. 引经据典时注明出处，如《史记·列传》《资治通鉴》
+3. 论述须有理有据，措辞典雅，切忌现代网络用语
+4. 若论及当前所查人物「${currentPerson.name}」（${currentPerson.dynasty}），须以其友人或后学身份评述之
+5. 每次回答不超过300字，末尾可附一句史评或诗词
+6. 以史官之口吻，庄重而不失文采。`
+    : `【古风史官人设】你是「史鉴人物志」中一位博古通今的史官，名唤文渊。你以古人姿态回应：
+1. 半文半白，语气儒雅从容，偶用「足下」「阁下」「窃以为」「善哉」等古语
+2. 引经据典时注明出处，如《史记·列传》《资治通鉴》
+3. 论述须有理有据，措辞典雅，切忌现代网络用语
+4. 每次回答不超过300字，末尾可附一句史评或诗词
+5. 以史官之口吻，庄重而不失文采。`;
+
+  const historyMsgs = chatHistory.slice(-20);
+  const apiMessages = [
+    { role: 'system', content: systemPrompt },
+    ...historyMsgs,
+    { role: 'user', content: text }
+  ];
+
+  try {
+    const reply = await callDeepSeek(apiMessages, 800);
+    chatHistory.push({ role: 'user', content: text });
+    chatHistory.push({ role: 'assistant', content: reply });
+    loadDiv.remove();
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'msg msg-ai';
+    aiDiv.innerHTML = `<div class="msg-ai-name">◆ 文渊阁学士</div>${reply.replace(/\n/g, '<br>')}`;
+    messages.appendChild(aiDiv);
+  } catch(e) {
+    loadDiv.remove();
+    const errDiv = document.createElement('div');
+    errDiv.className = 'msg msg-ai';
+    errDiv.innerHTML = `<div class="msg-ai-name">◆ 抱歉</div>请求失败：${e.message}，请检查 API Key 是否有效。`;
+    messages.appendChild(errDiv);
+  } finally {
+    isSending = false;
+    document.getElementById('chatSendBtn').disabled = false;
+    messages.scrollTop = messages.scrollHeight;
+  }
+}
+
+// 输入框自动高度
+document.getElementById('chatInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+document.getElementById('chatInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+
+/* ===== 初始化 ===== */
+initDaily();
+selectPerson('诸葛亮');
+if (apiKey) {
+  setTimeout(() => appendSysMsg('API Key 已就绪，文渊阁听候差遣。当前人物：<strong style="color:var(--primary)">诸葛亮</strong>'), 500);
+}
+</script>
+</body>
+</html>
