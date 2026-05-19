@@ -969,7 +969,7 @@
       · 二人之间关系对比<br>
       · 历史事件之评析<br>
       · 诗词文章之解读<br><br>
-      请先在上方填入 API Key，方可与吾对话。
+      文渊阁随时听候差遣。
     </div>
   </div>
   <div class="quick-questions" id="quickQuestions">
@@ -993,25 +993,6 @@
   <span class="ai-fab-icon">💬</span> AI 对话
 </button>
 
-<!-- API Key 弹层 -->
-<div class="key-modal" id="keyModal">
-  <div class="key-modal-box">
-    <div class="key-modal-title">配置 DeepSeek API Key</div>
-    <div class="key-modal-sub">
-      前往 <strong style="color:var(--accent)">platform.deepseek.com</strong> 注册并获取 API Key。<br>
-      Key 仅保存在浏览器本地，不会上传至任何服务器。
-    </div>
-    <input type="password" class="key-input" id="keyInput" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx">
-    <div style="font-size:11px; color:#b8b2a8; margin-bottom:16px; letter-spacing:1px;">
-      填入后点击下方保存即可生效
-    </div>
-    <div class="key-modal-btns">
-      <button class="btn-cancel" onclick="closeKeyModal()">取消</button>
-      <button class="btn-confirm" onclick="saveKey()">保存</button>
-    </div>
-  </div>
-</div>
-
 <!-- tooltip -->
 <div class="tooltip" id="tooltip"></div>
 
@@ -1021,27 +1002,6 @@
 // Vercel部署：使用相对路径 /api/deepseek；本地开发：走代理
 const DEEPSEEK_API = '/api/deepseek';
 const DEEPSEEK_MODEL = 'deepseek-chat';
-
-/* ===== API Key 管理 ===== */
-let apiKey = localStorage.getItem('deepseek_api_key') || '';
-if (!localStorage.getItem('deepseek_api_key')) {
-  localStorage.setItem('deepseek_api_key', apiKey);
-}
-
-function openKeyModal() {
-  document.getElementById('keyInput').value = apiKey;
-  document.getElementById('keyModal').classList.add('show');
-}
-function closeKeyModal() {
-  document.getElementById('keyModal').classList.remove('show');
-}
-function saveKey() {
-  const val = document.getElementById('keyInput').value.trim();
-  apiKey = val;
-  localStorage.setItem('deepseek_api_key', val);
-  closeKeyModal();
-  appendSysMsg('API Key 已保存，文渊阁随时听候差遣。');
-}
 
 /* ===== 收藏系统 ===== */
 function getFavs() { return JSON.parse(localStorage.getItem('history_favs') || '[]'); }
@@ -1272,7 +1232,6 @@ function switchToAISearch(name) {
 /* AI搜索 */
 async function aiSearchPerson(name) {
   if (aiSearching) return;
-  if (!apiKey) { openKeyModal(); return; }
   aiSearching = true;
   document.getElementById('mainContent').innerHTML = `<div class="card" style="margin-bottom:16px;">
     <div class="ai-searching"><div class="dot-ani"><span></span><span></span><span></span></div> 正在查询「${name}」…</div></div>`;
@@ -1305,14 +1264,11 @@ async function aiSearchPerson(name) {
   } finally { aiSearching = false; }
 }
 
-/* ===== DeepSeek API 调用 ===== */
+/* ===== DeepSeek API 调用（服务端代理，无需前端 Key）===== */
 async function callDeepSeek(messages, maxTokens = 800) {
   const resp = await fetch(DEEPSEEK_API, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: DEEPSEEK_MODEL, messages, max_tokens: maxTokens, temperature: 0.7, stream: false })
   });
   if (!resp.ok) {
@@ -1491,7 +1447,6 @@ async function sendChat() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
-  if (!apiKey) { openKeyModal(); return; }
 
   isSending = true;
   input.value = '';
@@ -1567,9 +1522,7 @@ document.getElementById('chatInput').addEventListener('keydown', function(e) {
 /* ===== 初始化 ===== */
 initDaily();
 selectPerson('诸葛亮');
-if (apiKey) {
-  setTimeout(() => appendSysMsg('API Key 已就绪，文渊阁听候差遣。当前人物：<strong style="color:var(--primary)">诸葛亮</strong>'), 500);
-}
+setTimeout(() => appendSysMsg('文渊阁已就绪，听候差遣。当前人物：<strong style="color:var(--primary)">诸葛亮</strong>'), 500);
 </script>
 </body>
 </html>

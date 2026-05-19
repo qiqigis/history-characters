@@ -1,7 +1,7 @@
 // Vercel Serverless Function - 代理 DeepSeek API
 // 路径：/api/deepseek
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   // CORS 头
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -26,20 +26,19 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({
       error: 'API key not configured',
-      message: '请在 Vercel 项目设置 → Environment Variables 中添加 DEEPSEEK_API_KEY'
+      message: '请在 Vercel 项目设置 -> Environment Variables 中添加 DEEPSEEK_API_KEY'
     }));
     return;
   }
 
   try {
-    const body = req.body;
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(req.body)
     });
 
     const data = await response.json();
@@ -51,4 +50,4 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: error.message }));
   }
-}
+};
