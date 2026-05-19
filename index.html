@@ -999,9 +999,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 /* ===== 配置 ===== */
-// Vercel部署：使用相对路径 /api/deepseek；本地开发：走代理
-const DEEPSEEK_API = '/api/deepseek';
+const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_MODEL = 'deepseek-chat';
+const DEEPSEEK_KEY = 'sk-0463c0d34fd8409eb9bc2bb97641f8aa';
 
 /* ===== 收藏系统 ===== */
 function getFavs() { return JSON.parse(localStorage.getItem('history_favs') || '[]'); }
@@ -1264,11 +1264,14 @@ async function aiSearchPerson(name) {
   } finally { aiSearching = false; }
 }
 
-/* ===== DeepSeek API 调用（服务端代理，无需前端 Key）===== */
+/* ===== DeepSeek API 调用 ===== */
 async function callDeepSeek(messages, maxTokens = 800) {
   const resp = await fetch(DEEPSEEK_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DEEPSEEK_KEY}`
+    },
     body: JSON.stringify({ model: DEEPSEEK_MODEL, messages, max_tokens: maxTokens, temperature: 0.7, stream: false })
   });
   if (!resp.ok) {
